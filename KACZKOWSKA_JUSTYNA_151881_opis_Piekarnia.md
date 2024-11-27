@@ -21,7 +21,7 @@ produktów każdy klient wybiera min. dwa różne, np.: bułka kajzerka 3szt., c
 dany produkt jest niedostępny (podajnik jest pusty) klient nie kupuje tego towaru. Następnie klient
 udaje się do kasy, a kasjer wystawia paragon na zakupy (kasjer zapamiętuje ile sztuk danego
 produktu skasował).
-11
+
 Na komunikat (sygnał1) o ewakuacji – sygnał wysyła kierownik - klienci natychmiast przerywają
 zakupy i opuszczają piekarnię omijając kasy – pobrany już z podajników towar odkładają do kosza
 przy kasach.
@@ -30,3 +30,6 @@ normalnie do zamknięcia piekarni/sklepu. Po zamknięciu sklepu, każda kasa rob
 sprzedanych produktów (Pi – liczba szt.), kierownik sumuje towar na podajnikach, piekarz podaje ilość
 wytworzonych produktów.
 Napisz program klienta, kierownika, piekarza i kasjera.
+
+Link do repozytorium:
+https://github.com/justirap/SO-Piekarnia
