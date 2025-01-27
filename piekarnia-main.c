@@ -36,14 +36,14 @@
 
 // ------------------- USTAWIENIA ------------------------------------
 #define P 12
-#define MAX_K 10
-#define MAX_IN_STORE 10
+// #define MAX_K 10
+// #define MAX_IN_STORE 10
 
 // Godziny otwarcia 
-#define T_p 8
-#define T_k 10
+// #define T_p 8
+// #define T_k 10
 
-#define N_TOTAL_CLIENTS 10000
+// #define N_TOTAL_CLIENTS 10000
 
 #define SIG_EWAKUACJA SIGUSR1
 #define SIG_INWENTARYZACJA SIGUSR2
@@ -157,9 +157,21 @@ void clear() {
       }
    }
 }
+int get_valid_input(const char *prompt, int min, int max) {
+    int value;
+    while (1) {
+        printf("%s (%d - %d): ", prompt, min, max);
+        if (scanf("%d", &value) == 1 && value >= min && value <= max) {
+            return value; 
+        } else {
+            printf("Nieprawidłowa wartość! Spróbuj ponownie.\n");
+            while (getchar() != '\n'); 
+        }
+    }
+}
 
 // ------------------- MANAGER ------------------------
-void manager_proces() {
+void manager_proces(int T_k, int T_p, int MAX_IN_STORE) {
 
    int czasOtwarcia = (T_k - T_p) * 10;
    time_t startTime = time(NULL);
@@ -250,6 +262,8 @@ void manager_proces() {
       unlock_semaphore(semid, SEM_MUTEX);
    }
 
+   
+
    if (inwentaryzacja_flag) {
       lock_semaphore(semid, SEM_MUTEX);
       int totalProducts = 0;
@@ -257,6 +271,7 @@ void manager_proces() {
          totalProducts += shdata -> produkty[i];
       }
       unlock_semaphore(semid, SEM_MUTEX);
+
 
       lock_semaphore(semid, SEM_FILE);
       FILE * f = fopen("raport.txt", "a");
@@ -279,7 +294,7 @@ void manager_proces() {
 }
 
 // ------------------- PIEKARZ ------------------------
-void piekarz_proces() {
+void piekarz_proces(int MAX_K) {
    srand(time(NULL) ^ (getpid() << 16));
 
    int producedLocal[P];
@@ -369,7 +384,7 @@ void kasjer_proces(int kasjer_id) {
          rcv = msgrcv(msgid, & req, sizeof(req) - sizeof(long),
             kasjer_id + 1, IPC_NOWAIT);
          if (rcv == -1) {
- lock_semaphore(semid, SEM_MUTEX);
+      lock_semaphore(semid, SEM_MUTEX);
       st = shdata -> cashierState[kasjer_id];
       inStoreNow = shdata -> inStore;
       unlock_semaphore(semid, SEM_MUTEX);
@@ -471,6 +486,7 @@ void kasjer_proces(int kasjer_id) {
       // unlock_semaphore(semid, SEM_FILE);
    }
 
+if(inwentaryzacja_flag){
    lock_semaphore(semid, SEM_FILE);
    FILE * f = fopen("raport.txt", "a");
    if (f) {
@@ -485,6 +501,7 @@ void kasjer_proces(int kasjer_id) {
       fclose(f);
    }
    unlock_semaphore(semid, SEM_FILE);
+}
 
    if (ewakuacja_flag) {
       printf(GREEN "[KASJER %d:%d] EWAKUACJA – kończę.\n"
@@ -674,25 +691,44 @@ void klient_proces() {
 // ------------------- GENERATOR KLIENTOW ------------------------
 void generator_klient_proces() {
 
-   for (int i = 0; i < N_TOTAL_CLIENTS; i++) {
-      if (inwentaryzacja_flag || ewakuacja_flag) break;
-      //  int sleep_duration = 2 + rand() % 9; 
-      //  sleep(sleep_duration);
-      pid_t pid = fork();
-      if (pid == 0) {
-         klient_proces();
-         exit(EXIT_SUCCESS);
-      } else if (pid < 0) {
-         perror("fork KLIENT");
-         clear();
-         exit(EXIT_FAILURE);
-      }
+   // for (int i = 0; i < N_TOTAL_CLIENTS; i++) {
+   //    if (inwentaryzacja_flag || ewakuacja_flag) break;
+   //    //  int sleep_duration = 2 + rand() % 9; 
+   //    //  sleep(sleep_duration);
+   //    pid_t pid = fork();
+   //    if (pid == 0) {
+   //       klient_proces();
+   //       exit(EXIT_SUCCESS);
+   //    } else if (pid < 0) {
+   //       perror("fork KLIENT");
+   //       clear();
+   //       exit(EXIT_FAILURE);
+   //    }
 
-   }
+   // }
 }
 
 // ------------------- MAIN ------------------------
 int main(int argc, char * argv[]) {
+
+
+    int MAX_K, MAX_IN_STORE, T_p, T_k, N_TOTAL_CLIENTS;
+
+    printf("Podaj wartości dla zmiennych:\n");
+
+    MAX_K = get_valid_input("Podaj wartość MAX_K", 10, 20);
+    MAX_IN_STORE = get_valid_input("Podaj wartość MAX_IN_STORE", 10, 100);
+    T_p = get_valid_input("Podaj wartość T_p", 7, 12);
+    T_k = get_valid_input("Podaj wartość T_k", 13, 23);
+    N_TOTAL_CLIENTS = get_valid_input("Podaj wartość N_TOTAL_CLIENTS", 20, 10000);
+
+
+    printf("\nWprowadzone wartości:\n");
+    printf("MAX_K = %d\n", MAX_K);
+    printf("MAX_IN_STORE = %d\n", MAX_IN_STORE);
+    printf("T_p = %d\n", T_p);
+    printf("T_k = %d\n", T_k);
+    printf("N_TOTAL_CLIENTS = %d\n", N_TOTAL_CLIENTS);
 
    if (signal(SIG_EWAKUACJA, signal_handler) == SIG_ERR) {
       perror("signal(SIG_EWAKUACJA)");
@@ -758,7 +794,7 @@ int main(int argc, char * argv[]) {
 
    pid_t pid = fork();
    if (pid == 0) {
-      manager_proces();
+      manager_proces(T_k, T_p, MAX_IN_STORE);
    } else if (pid < 0) {
       perror("fork MANAGER");
       clear();
@@ -776,7 +812,7 @@ int main(int argc, char * argv[]) {
    for (int i = 0; i < 5; i++) {
       pid = fork();
       if (pid == 0) {
-         piekarz_proces();
+         piekarz_proces(MAX_K);
       } else if (pid < 0) {
          perror("fork PIEKARZ");
          clear();
