@@ -173,21 +173,32 @@ void manager_proces() {
    shdata -> cashierState[2] = CASHIER_INACTIVE;
    unlock_semaphore(semid, SEM_MUTEX);
 
+
+   srand(time(NULL));
+   int los = (rand() % 2);
+    printf(YELLOW"[MANAGER %d] Los %d\n"RESET,
+      getpid(), los);
+
    while (!ewakuacja_flag && !inwentaryzacja_flag) {
       sleep(3);
 
       time_t now = time(NULL);
+
+   if(los == 0){
       if (now - startTime >= czasOtwarcia) {
          printf(YELLOW "[MANAGER %d] Koniec godzin pracy -> SIG_INWENTARYZACJA\n"
             RESET, getpid());
          kill(0, SIG_INWENTARYZACJA);
          break;
+         }
+      }else{
+         if (now - startTime >= 30) {
+          printf(RED"[MANAGER %d] EWAKUACJA -> SIG_EWAKUACJA\n"RESET, getpid());
+          kill(0, SIG_EWAKUACJA);
+          break;
+         }
       }
-    //       if (now - startTime >= 30) {
-    //       printf(RED"[MANAGER %d] EWAKUACJA -> SIG_EWAKUACJA\n"RESET, getpid());
-    //       kill(0, SIG_EWAKUACJA);
-    //       break;
-    //   }
+       
 
       lock_semaphore(semid, SEM_MUTEX);
 
